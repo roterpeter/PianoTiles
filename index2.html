@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Piano Tiles Mobile</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <style>
+    body {
+      margin: 0;
+      background: linear-gradient(to right, #5B86E5, #36D1DC);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      height: 100vh;
+      overflow: hidden;
+      font-family: 'Trebuchet MS', sans-serif;
+    }
+    #score_bar {
+      width: 90%;
+      max-width: 400px;
+      height: 70px;
+      display: block;
+      margin-top: 10px;
+    }
+    #background, #piano {
+      width: 90%;
+      max-width: 400px;
+      height: 600px;
+      display: block;
+      touch-action: manipulation;
+    }
+    #btn {
+      margin-top: 20px;
+    }
+    #start_btn {
+      font-size: 1.3em;
+      width: 100px;
+      height: 100px;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      background: #5a99d4;
+      cursor: pointer;
+      text-align: center;
+      line-height: 100px;
+      transition: 0.3s;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      display: inline-block;
+    }
+    #start_btn:hover {
+      width: 105px;
+      height: 105px;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="score_bar" width="300" height="70"></canvas>
+  <canvas id="background" width="300" height="600"></canvas>
+  <canvas id="piano" width="300" height="600"></canvas>
+  <audio id="music" src="MUSIC.mp3" loop></audio>
+
+  <div id="btn"><span id="start_btn">START</span></div>
+
+  <script>
+    var c = document.getElementById("piano");
+    var context = c.getContext("2d");
+    var b = document.getElementById("background");
+    var context_back = b.getContext("2d");
+    var a = document.getElementById("score_bar");
+    var context_score = a.getContext("2d");
+
+    var numOfTiles = 5;
+    var myScore = 0;
+    var eachState = [false,false,false,false,false];
+    var myTiles = [];
+
+    var intervalTmp, geneTmp;
+
+    paintWindow(); 
+    paintScoreBar();
+
+    document.getElementById('btn').addEventListener('click', function(e){
+      var content = document.getElementById('start_btn');
+      if(content.innerHTML == "START" || content.innerHTML == "GG"){
+        intervalTmp = setInterval(upDate, 5);
+        geneTmp = setInterval(geneBlock, 600);
+        document.getElementById('music').play();
+        content.innerHTML = "PAUSE";
+      } else {
+        document.getElementById('music').pause();
+        clearInterval(intervalTmp);
+        clearInterval(geneTmp);
+        content.innerHTML = "START";
+      }
+    });
+
+    c.addEventListener('touchstart', function(e){
+      e.preventDefault();
+      var rect = c.getBoundingClientRect();
+      var touch = e.touches[0];
+      var x = touch.clientX - rect.left;
+      var y = touch.clientY - rect.top;
+      handleTap(x, y);
+    });
+
+    c.addEventListener('click', function(e){
+      var rect = c.getBoundingClientRect();
+      var x = e.clientX - rect.left;
+      var y = e.clientY - rect.top;
+      handleTap(x, y);
+    });
+
+    function paintScoreBar(){
+      var score_gradient = context_score.createLinearGradient(0,0,0,80);
+      score_gradient.addColorStop(0,"rgba(74,171,254,0)");
+      score_gradient.addColorStop(0.5,"rgba(74,84,254,0)");
+      score_gradient.addColorStop(1,"rgba(116,74,254,0)");
+      context_score.fillStyle = score_gradient;
+      context_score.fillRect(0,0,a.width,a.height);    
+    }
+
+    function geneBlock(){
+      var myRand = Math.floor(Math.random()*numOfTiles);
+      var flag = true;
+      for(var i = 0; i < numOfTiles; ++i){
+        if(!eachState[i]) flag = false;
+      }
+      if(flag) return;
+      while(eachState[myRand]) myRand = Math.floor(Math.random()*numOfTiles);
+      myTiles[myRand] = new Block(myRand);
+    }
+
+    function paintWindow(){
+      var my_gradient = context_back.createLinearGradient(0,0,0,600);
+      my_gradient.addColorStop(0,"rgba(65,234,246,0.6)");
+      my_gradient.addColorStop(1,"rgba(254,74,251,0.5)");
+      context_back.fillStyle = my_gradient;
+      context_back.fillRect(0,0,300,600);
+
+      var lines = [72,148,226];
+      context_back.strokeStyle = "white";
+      for (let l of lines){
+        context_back.beginPath();
+        context_back.moveTo(l,0);
+        context_back.lineTo(l,600);
+        context_back.stroke();
+      }
+      context_back.beginPath();
+      context_back.moveTo(0,470);
+      context_back.lineTo(300,470);
+      context_back.stroke();
+    }
+
+    function Block(index){
+      if(!eachState[index]) eachState[index] = true;
+      this.index = index;
+      this.appearPos = Math.floor(Math.random()*4);
+      this.width = 70;
+      this.height = 120;
+      this.color = "black";
+      this.x = [0,75,152,228][this.appearPos];
+      this.y = -120;
+      context.fillStyle = this.color;
+      context.fillRect(this.x,this.y,this.width,this.height);
+      this.live = true;
+    }
+
+    function afterRight(index){
+      myScore++;
+      context.clearRect(myTiles[index].x,myTiles[index].y,70,120);
+      myTiles[index].live = false;
+      eachState[index] = false;
+    }
+
+    function upDate(){
+      context_score.clearRect(0,0,a.width,a.height);
+      paintScoreBar();
+      context_score.fillStyle = "rgba(88,38,255,0.8)";
+      context_score.font = "30px Verdana";
+      context_score.textAlign = "center";
+      context_score.fillText(myScore.toString(), a.width/2, 50);
+      
+      for(let i=0;i<numOfTiles;i++){
+        if(eachState[i]){
+          myTiles[i].y += 1;
+          context.fillStyle = "black";
+          context.fillRect(myTiles[i].x,myTiles[i].y,70,120);   
+          context.clearRect(myTiles[i].x,myTiles[i].y-2,70,2);
+        }
+      }
+
+      for(let i=0;i<numOfTiles;i++){
+        if(eachState[i]){
+          if(myTiles[i].y > 470){
+            context.clearRect(myTiles[i].x,myTiles[i].y,70,120);
+            context.fillStyle = "rgba(245,13,13,0.8)";
+            context.fillRect(myTiles[i].x,myTiles[i].y,70,120);
+            myTiles[i].live = false;
+            eachState[i] = false;
+            document.getElementById('music').pause();
+            clearInterval(intervalTmp);
+            clearInterval(geneTmp);
+            document.getElementById('start_btn').innerHTML = "GG";
+          }
+        }
+      }
+    }
+
+    function handleTap(x, y){
+      for(let i=0;i<numOfTiles;i++){
+        if(eachState[i] && myTiles[i].live){
+          let tile = myTiles[i];
+          if(x > tile.x && x < tile.x + tile.width && y > tile.y && y < tile.y + tile.height){
+            if(tile.y > 350 && tile.y < 470) afterRight(i);
+          }
+        }
+      }
+    }
+  </script>
+</body>
+</html>
